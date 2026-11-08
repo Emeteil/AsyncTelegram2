@@ -28,7 +28,7 @@ AsyncTelegram2::~AsyncTelegram2(){};
 
 bool AsyncTelegram2::connectToTelegramServer()
 {
-    if (telegramClient->connect(TELEGRAM_HOST, TELEGRAM_PORT))
+    if (telegramClient->connect(m_host.c_str(), TELEGRAM_PORT))
     {
         if (m_insecureMode)
         {
@@ -49,9 +49,9 @@ bool AsyncTelegram2::connectToTelegramServer()
     {
         log_error("Telegram connection failed, invoking custom recovery callback");
         telegramClient->stop();
-        if (m_connectionRecoveryCallback(*telegramClient, TELEGRAM_HOST, TELEGRAM_PORT))
+        if (m_connectionRecoveryCallback(*telegramClient, m_host.c_str(), TELEGRAM_PORT))
         {
-            if (telegramClient->connect(TELEGRAM_HOST, TELEGRAM_PORT))
+            if (telegramClient->connect(m_host.c_str(), TELEGRAM_PORT))
             {
                 m_customRecoveryMode = true;
                 m_connectionMode = ConnectionModeCustomRecovery;
@@ -65,7 +65,7 @@ bool AsyncTelegram2::connectToTelegramServer()
     {
         log_error("TLS certificate validation failed, retrying with insecure client");
         telegramClient->stop();
-        if (telegramClient->connect(TELEGRAM_HOST, TELEGRAM_PORT))
+        if (telegramClient->connect(m_host.c_str(), TELEGRAM_PORT))
         {
             m_insecureMode = true;
             m_customRecoveryMode = false;
@@ -163,14 +163,18 @@ bool AsyncTelegram2::sendCommand(const char *command, const char *payload, bool 
     {
         String httpBuffer((char *)0);
         httpBuffer.reserve(BUFFER_BIG);
-        httpBuffer = "POST https://" TELEGRAM_HOST "/bot";
+        httpBuffer = "POST https://";
+        httpBuffer += m_host;
+        httpBuffer += m_proxyPrefix;
+        httpBuffer += "/bot";
         httpBuffer += m_token;
         httpBuffer += "/";
         httpBuffer += command;
         // Let's use 1.0 protocol in order to avoid chunked transfer encoding
         httpBuffer += " HTTP/1.0"
-                      "\nHost: " TELEGRAM_HOST
-                      "\nConnection: keep-alive"
+                      "\nHost: ";
+        httpBuffer += m_host;
+        httpBuffer += "\nConnection: keep-alive"
                       "\nContent-Type: application/json";
         httpBuffer += "\nContent-Length: ";
         httpBuffer += strlen(payload);
@@ -559,7 +563,10 @@ bool AsyncTelegram2::getFile(TBDocument &doc)
     JSON_DOC(BUFFER_MEDIUM);
     deserializeJson(root, m_rxbuffer);
     debugJson(root, Serial);
-    doc.file_path = "https://api.telegram.org/file/bot";
+    doc.file_path = "https://";
+    doc.file_path += m_host;
+    doc.file_path += m_proxyPrefix;
+    doc.file_path += "/file/bot";
     doc.file_path += m_token;
     doc.file_path += "/";
     doc.file_path += root["result"]["file_path"].as<String>();
@@ -793,14 +800,17 @@ void AsyncTelegram2::setformData(int64_t chat_id, const char *cmd, const char *t
     formData += type;
     formData += "\"\r\n\r\n";
 
-    request = "POST /bot";
+    request = "POST ";
+    request += m_proxyPrefix;
+    request += "/bot";
     request += m_token;
     request += "/";
     request += cmd;
     request +=  " HTTP/1.0"
                 "\r\nConnection: keep-alive"
-                "\r\nHost: " TELEGRAM_HOST
-                "\r\nContent-Length: ";
+                "\r\nHost: ";
+    request += m_host;
+    request += "\r\nContent-Length: ";
     request += (size + formData.length() + strlen(END_BOUNDARY));
     request += "\r\nContent-Type: multipart/form-data; boundary=" BOUNDARY "\r\n";
 }

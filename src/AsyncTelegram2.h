@@ -106,6 +106,21 @@ public:
     //   token: the telegram token
     inline void setTelegramToken(const char *token) { m_token = (char *)token; }
 
+    inline void setTelegramHost(const char *host) { m_host = host; }
+
+    inline void setCorsProxyPrefix(const char *prefix)
+    {
+        m_proxyPrefix = prefix;
+        if (m_proxyPrefix.length() > 0 && !m_proxyPrefix.startsWith("/"))
+        {
+            m_proxyPrefix = "/" + m_proxyPrefix;
+        }
+        if (m_proxyPrefix.endsWith("/"))
+        {
+            m_proxyPrefix.remove(m_proxyPrefix.length() - 1);
+        }
+    }
+
     // set the interval in milliseconds for polling
     // in order to Avoid query Telegram server to much often (ms)
     // params:
@@ -483,6 +498,8 @@ private:
     TelegramSecureClient *secureTelegramClient = nullptr;
 #endif
     const char *m_token;
+    String m_host = TELEGRAM_HOST;
+    String m_proxyPrefix = "";
     String m_rxbuffer;
     String m_botusername; // Store only botname, instead TBUser struct
 
